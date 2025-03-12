@@ -1,0 +1,18 @@
+# Use an official Node runtime as a parent image
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Install all dependencies (including dev dependencies)
+COPY package*.json ./
+RUN npm install
+
+# Bundle app source
+COPY . .
+
+# Expose the backend port
+EXPOSE 3007
+
+# Start in development mode with nodemon (ensure your package.json has a "dev" script, e.g., "nodemon server.js")
+CMD ["npm", "run", "dev"]

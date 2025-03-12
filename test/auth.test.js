@@ -3,8 +3,8 @@ const request = require('supertest');
 const app = require('../app');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const RefreshToken = require('../models/RefreshToken');
+const User = require('../models/mongoose/User');
+const RefreshToken = require('../models/mongoose/RefreshToken');
 
 // Test Setup and Teardown
 beforeAll(async () => {
