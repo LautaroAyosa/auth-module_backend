@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const temporarySession = sequelize.define('temporary_session', {
+    const TemporarySession = sequelize.define('temporary_session', {
       sessionId: { type: DataTypes.STRING, allowNull: false, unique: true },
       // createdAt will be managed automatically; to simulate auto-expiry you may use a cron job or database job
     }, {
@@ -7,9 +7,9 @@ module.exports = (sequelize, DataTypes) => {
       tableName: 'temporary_sessions',
     });
   
-    temporarySession.associate = (models) => {
-      temporarySession.belongsTo(models.user, { foreignKey: 'userId' });
+    TemporarySession.associate = (models) => {
+      TemporarySession.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });
     };
   
-    return temporarySession;
+    return TemporarySession;
 };

@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const refreshToken = sequelize.define('refresh_token', {
+    const RefreshToken = sequelize.define('refresh_token', {
       token: { type: DataTypes.STRING, allowNull: false, unique: true },
       expiresAt: { type: DataTypes.DATE, allowNull: false },
     }, {
@@ -7,10 +7,10 @@ module.exports = (sequelize, DataTypes) => {
       tableName: 'refresh_tokens',
     });
   
-    refreshToken.associate = (models) => {
-      refreshToken.belongsTo(models.user, { foreignKey: 'userId' });
+    RefreshToken.associate = (models) => {
+      RefreshToken.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });
     };
   
-    return refreshToken;
+    return RefreshToken;
   };
   
