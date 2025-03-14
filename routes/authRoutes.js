@@ -12,6 +12,7 @@ module.exports = (repositories) => {
         register,
         login,
         logout,
+        deleteUser,
         makeAdmin,
         enableMFA,
         verifyMFA,
@@ -23,13 +24,13 @@ module.exports = (repositories) => {
         googleAuth,
         validateSession,
         protectedRoute,
-        test,
     } = require('../controllers/authController')(repositories);
 
     // POST Routes
     authRouter.post('/register', register);
     authRouter.post('/login', login);
     authRouter.post('/logout', logout);
+    authRouter.post('/delete-user', deleteUser);
     authRouter.post('/make-admin', requireAuth, requireRole('admin'), makeAdmin);
     authRouter.post('/enable-mfa', enableMFA);
     authRouter.post('/verify-mfa', verifyMFA);
@@ -45,7 +46,5 @@ module.exports = (repositories) => {
     authRouter.get('/admin', requireAuth, requireRole('admin', protectedRoute));
     authRouter.get('/user', requireAuth, requireRole('user', protectedRoute));
 
-
-    authRouter.post('/test', test);
     return authRouter;
 }

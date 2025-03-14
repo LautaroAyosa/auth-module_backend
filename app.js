@@ -1,33 +1,28 @@
-// // Application setup
-// const dotenv = require('dotenv');
-// dotenv.config();
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const { connectDB } = require('./config/db');
 
-// const { connectDB } = require('./config/db');
-// // Connect to Database
-// connectDB();
+function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  }));
+  return app;
+}
 
-// const express = require('express');
-// const cors = require('cors');
-// const passport = require('passport');
+async function initializeApp(dbConfig) {
+  const app = createApp();
+  await connectDB(dbConfig);
+  const { createRepositories } = require('./repositories/repositoryFactory');
+  const repositories = await createRepositories(dbConfig);
+  const authRoutes = require('./routes/authRoutes')(repositories);
+  app.use('/auth', authRoutes);
+  return app;
+}
 
-// console.log('before importing routes')
-// const authRoutes = require('./routes/authRoutes');
-// const cookieParser = require('cookie-parser');
-
-// const app = express();
-// app.use(express.json());
-// app.use(cookieParser());
-// app.use(cors({
-//     origin: "http://frontend:3006", // Frontend origin
-//     credentials: true, // Allow credentials
-//   })
-// );
-
-// // Routes
-// app.use('/auth', authRoutes);
-
-
-// module.exports = app;
-
-// ---------------------------------
-
+module.exports = { initializeApp, createApp };
