@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('user', {
+    const User = sequelize.define('user', {
       id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -17,5 +17,13 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: true,
       tableName: 'users',
     });
+
+    User.associate = (models) => {
+      User.hasMany(models.RefreshToken, { foreignKey: 'userId', onDelete: 'CASCADE' });
+      User.hasMany(models.PasswordResetToken, { foreignKey: 'userId', onDelete: 'CASCADE' });
+      User.hasMany(models.TemporarySession, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    };
+
+    return User;
   };
   

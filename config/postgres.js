@@ -56,7 +56,7 @@ const connectPostgres = async (dbConfig) => {
     await sequelize.authenticate();
     console.log('✅ PostgreSQL Connected via Sequelize to', dbConfig?.pgName || config.database);
   } catch (err) {
-    console.error('PostgreSQL Connection Error:', err);
+    console.error('❌ PostgreSQL Connection Error:', err);
   }
 };
 

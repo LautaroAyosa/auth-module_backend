@@ -1,6 +1,3 @@
-const { connectPostgres } = require('./postgres');
-const { connectMongo } = require('./mongo');
-
 // Connect to the appropriate database
 // This function is called in the main server file
 

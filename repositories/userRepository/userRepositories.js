@@ -17,7 +17,10 @@ class PostgresUserRepository {
   }
 
   async findUserByEmail(data) {
-    return await this.UserModel.findOne({ where: { email: data.email } });
+    return await this.UserModel.findOne({ 
+      where: { email: data.email },
+      raw: true
+    });
   }
 
   async createUser(data) {
