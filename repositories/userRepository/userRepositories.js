@@ -38,6 +38,14 @@ class PostgresUserRepository {
     }
     return user.update(data);
   }
+
+  async deleteOneUser(data) {
+    if (data.id) {
+      return this.UserModel.destroy({ where: {id: data.id } });
+    } else if (data.email) {
+      return this.UserModel.destroy({ where: {email: data.email } });
+    }
+  }
 }
   
 // MongoDB Repository
@@ -65,6 +73,15 @@ class MongoUserRepository {
   async updateUser(id, data) {
     return this.UserModel.findOneAndUpdate({_id: id.id}, data, {new: true});
   }
+
+  // Delete User by id or email string
+  async deleteOneUser(data) {
+    if (data.id) {
+      return this.UserModel.deleteOne({id: data.id});
+    } else if (data.email) {
+      return this.UserModel.deleteOne({email: data.email});
+    }
+}
 }
   
   module.exports = { PostgresUserRepository, MongoUserRepository };

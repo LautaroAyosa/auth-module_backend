@@ -29,30 +29,6 @@ module.exports = (repositories) => {
     };
 
     return {
-        test: async (req, res) => {
-            const token = crypto.randomBytes(32).toString('hex');
-            const token2 = crypto.randomBytes(32).toString('hex');
-            const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-            // "67d1bb2be903677543a1155b"
-            const newToken = await passwordResetTokenRepository.createPasswordResetToken({
-                token: token,
-                userId: 1,
-                expiresAt: expiresAt
-            })
-            const findOne = await passwordResetTokenRepository.findPasswordResetToken({token: token})
-            const deleteOne = await passwordResetTokenRepository.deletePasswordResetToken({token: token})
-            const findNotAvailable = await passwordResetTokenRepository.findPasswordResetToken({token: token})
-            res.json({
-                "newToken": newToken,
-                "findOne": findOne,
-                "deleteOne": deleteOne,
-                "findDeleted": findNotAvailable
-            });
-            try {
-            } catch (err) {
-                res.status(500).json({ error: 'Error getting users', err });
-            }
-        },
         validateSession: async (req, res) => {
             const accessToken = req.cookies?.accessToken;
             if (!accessToken) {
@@ -157,7 +133,7 @@ module.exports = (repositories) => {
                     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
                 });
         
-                res.json({ message: 'Login successful' });        
+                res.status(200).json({ message: 'Login successful' });        
             } catch (err) {
                 res.status(500).json({ error: 'Error logging in' });
             }
@@ -168,9 +144,20 @@ module.exports = (repositories) => {
                 await refreshTokenRepository.deleteRefreshToken({ token: refreshToken });
                 res.clearCookie('accessToken');
                 res.clearCookie('refreshToken');
-                res.json({ message: 'Logged out successfully' });
+                res.status(200).json({ message: 'Logged out successfully' });
             } catch (err) {
                 res.status(500).json({ error: 'Error logging out' });
+            }
+        },
+        deleteUser: async (req, res) => {
+            const body = req.body;
+            try {
+                if (body.id) { await userRepository.deleteOneUser({ id: body.id }) }
+                else if (body.email) { await userRepository.deleteOneUser({ email: body.email })}
+                
+                res.status(200).json({ message: 'Deleted User successfully'});
+            } catch (err) {
+                res.status(500).json({ error: 'There has been an error deleting the user: ', err })
             }
         },
         refreshToken: async (req, res) => {

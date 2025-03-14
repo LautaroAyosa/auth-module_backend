@@ -5,21 +5,13 @@ const { PostgresPasswordResetTokenRepository, MongoPasswordResetTokenRepository 
 // ... import other repositories
 
 
-// Postgres Models
-const { getModels } = require('../config/postgres');
-const { User, RefreshToken, TemporarySession, PasswordResetToken } = getModels();
-
-
-// Mongoose Models
-const MongooseUser = require('../models/mongoose/User');
-const MongooseRefreshToken = require('../models/mongoose/RefreshToken');
-const MongooseTemporarySession = require('../models/mongoose/TemporarySession');
-const MongoosePasswordResetToken = require('../models/mongoose/PasswordResetToken');
-// ... import other mongoose models
-
-
-async function createRepositories() {
-  if (process.env.DB_TYPE == 'postgres') {
+async function createRepositories(dbConfig) {
+  const dbType = dbConfig?.dbType || process.env.DB_TYPE;
+  if (dbType == 'postgres') {
+    // Postgres Models
+    const { getModels } = require('../config/postgres');
+    const { User, RefreshToken, TemporarySession, PasswordResetToken } = getModels();
+    // ... import other postgres models
     return {
       userRepository: new PostgresUserRepository(User),
       refreshTokenRepository: new PostgresRefreshTokenRepository(RefreshToken),
@@ -28,6 +20,12 @@ async function createRepositories() {
       // ... add more repos
     };
   } else {
+    // Mongoose Models
+    const MongooseUser = require('../models/mongoose/User');
+    const MongooseRefreshToken = require('../models/mongoose/RefreshToken');
+    const MongooseTemporarySession = require('../models/mongoose/TemporarySession');
+    const MongoosePasswordResetToken = require('../models/mongoose/PasswordResetToken');
+    // ... import other mongoose models
     return {
       userRepository: new MongoUserRepository(MongooseUser),
       refreshTokenRepository: new MongoRefreshTokenRepository(MongooseRefreshToken),

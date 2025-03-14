@@ -1,4 +1,3 @@
-// Config file for migrations and seeders.
 require('dotenv').config();
 
 module.exports = {

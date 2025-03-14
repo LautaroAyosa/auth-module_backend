@@ -1,49 +1,69 @@
-// PostgreSQL setup
 const { Sequelize, DataTypes } = require('sequelize');
-const config = require('../config/config.js')[process.env.NODE_ENV || 'development']; // Load correct env config
+const config = require('./config.js')[process.env.NODE_ENV || 'development'];
 
-let sequelize
+let sequelize;
+let dbModels;
 
-// Check if `use_env_variable` is set (for production)
-if (process.env.NODE_ENV === 'production' && config.use_env_variable) {
-    sequelize = new Sequelize(process.env[config.use_env_variable], {
-      dialect: config.dialect,
-      logging: false, 
-    });
-  } else {
-    sequelize = new Sequelize(config.database, config.username, config.password, {
-      host: config.host,
-      dialect: config.dialect,
-      logging: false,
-    });
+const createSequelizeInstance = (pgUri) => {
+  if (pgUri) {
+    console.log('hello', pgUri)
+    return new Sequelize(pgUri, { dialect: 'postgres', logging: false });
   }
-
-const dbModels = {};
-
-// Import models
-dbModels.User = require('../models/sequelize/User')(sequelize, DataTypes);
-dbModels.PasswordResetToken = require('../models/sequelize/PasswordResetToken')(sequelize, DataTypes);
-dbModels.RefreshToken = require('../models/sequelize/RefreshToken')(sequelize, DataTypes);
-dbModels.TemporarySession = require('../models/sequelize/TemporarySession')(sequelize, DataTypes);
-
-// Run model associations
-Object.keys(dbModels).forEach((modelName) => {
-  if (dbModels[modelName].associate) {
-    dbModels[modelName].associate(dbModels);
+  if (process.env.NODE_ENV === 'production' && config.use_env_variable) {
+    return new Sequelize(process.env[config.use_env_variable], { dialect: config.dialect, logging: false });
   }
-});
+  console.log('chau', pgUri)
+  return new Sequelize(config.database, config.username, config.password, {
+    host: config.host,
+    dialect: config.dialect,
+    logging: false,
+  });
+};
 
-// Connect to PostgreSQL
-const connectPostgres = async () => {
+const loadModels = (sequelize) => {
+    // Import models
+  const User = require('../models/sequelize/User')(sequelize, DataTypes);
+  const PasswordResetToken = require('../models/sequelize/PasswordResetToken')(sequelize, DataTypes);
+  const RefreshToken = require('../models/sequelize/RefreshToken')(sequelize, DataTypes);
+  const TemporarySession = require('../models/sequelize/TemporarySession')(sequelize, DataTypes);
+
+  // Set up associations
+  RefreshToken.belongsTo(User, { foreignKey: 'userId' });
+  PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
+  TemporarySession.belongsTo(User, { foreignKey: 'userId' });
+  // const models = {};
+  // ['User', 'PasswordResetToken', 'RefreshToken', 'TemporarySession'].forEach(modelName => {
+  //   models[modelName] = require(`../models/sequelize/${modelName}`)(sequelize, DataTypes);
+  // });
+  // console.log(models);
+  // Object.values(models).forEach(model => {
+  //   if (model.associate) model.associate(models);
+  // });
+
+  models = {
+    User,
+    PasswordResetToken,
+    RefreshToken,
+    TemporarySession
+  };
+  return models;
+};
+
+const connectPostgres = async (dbConfig) => {
   try {
-    await sequelize.authenticate(); // Test connection only
-    console.log('✅ PostgreSQL Connected via Sequelize to ', config.database);
+    sequelize = createSequelizeInstance(dbConfig?.pgUri);
+    dbModels = loadModels(sequelize);
+    await sequelize.authenticate();
+    console.log('✅ PostgreSQL Connected via Sequelize to', dbConfig?.pgName || config.database);
   } catch (err) {
     console.error('❌ PostgreSQL Connection Error:', err);
   }
 };
 
+const disconnectPostgres = async () => {
+  await sequelize.close();
+};
+
 const getModels = () => dbModels;
 
-// Export Sequelize for CLI and app use
-module.exports = { sequelize, connectPostgres, getModels };
+module.exports = { sequelize, connectPostgres, getModels, disconnectPostgres };

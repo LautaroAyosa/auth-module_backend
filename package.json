@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --runInBand",
+    "test:mongo": "jest tests/mongo",
+    "test:postgres": "jest tests/postgres",
     "dev": "nodemon ./index.js",
     "start": "node ./index.js",
     "db:migrate": "sequelize-cli db:migrate",
