@@ -334,21 +334,20 @@ module.exports = (repositories) => {
             }
         },
         requestPasswordReset: async (req, res) => {
-            const { email } = req.body;
             try {
+                const { email } = req.body;
                 const user = await userRepository.findUserByEmail({ email: email });
                 if (!user) return res.status(404).json({ error: 'No user found' });
-        
                 // Delete any existing tokens for this user
                 await passwordResetTokenRepository.deleteManyFromUser({ userId: user.id });
-        
+                
                 // Create token, store hashed, set expiration
                 const token = crypto.randomBytes(32).toString('hex');
                 const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
                 await passwordResetTokenRepository.createPasswordResetToken({ 
-                    userId: user.id, 
                     token: token,
-                    expiresAt: expiresAt 
+                    expiresAt: expiresAt,
+                    userId: user.id,
                 });
             
                 // Send email with reset link, e.g. https://yourapp.com/reset-password/:token
@@ -356,7 +355,7 @@ module.exports = (repositories) => {
                 await sendEmail(user.email, 'Password Reset', `Reset link: ${process.env.HOME_URL}/auth/reset-password/${token}`);
                 res.json({ message: 'Reset link sent' });
             } catch (err) {
-                res.status(500).json({ error: 'Request failed' });
+                res.status(500).json({ error: 'Request failed', err });
             }
         },
         resetPassword: async (req, res) => {
