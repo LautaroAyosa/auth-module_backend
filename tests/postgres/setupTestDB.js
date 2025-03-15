@@ -2,15 +2,15 @@
 const { execSync } = require('child_process');
 
 const runMigrations = () => {
-  execSync('npm run db:migrations', { stdio: 'inherit' });
+  execSync('npm run db:migrate', { stdio: 'inherit' });
 };
 
 const runSeeders = () => {
-  execSync('npm run db:seeders', { stdio: 'inherit' });
+  execSync('npm run db:seed', { stdio: 'inherit' });
 };
 
 const rollbackMigrations = () => {
-  execSync('npm run db:migrations:undo', { stdio: 'inherit' });
+  execSync('npm run db:migrate:undo:all', { stdio: 'inherit' });
 };
 
 module.exports = { runMigrations, runSeeders, rollbackMigrations };

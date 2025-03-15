@@ -80,15 +80,28 @@ module.exports = (repositories) => {
             try {
                 const hashedPassword = await bcrypt.hash(password, 10);
         
-                const user = await userRepository.createUser({ 
+                const createdUser = await userRepository.createUser({ 
                     name: name, 
                     email: email, 
                     password: hashedPassword 
                 });
+                const user = {
+                    name: createdUser.name,
+                    email: createdUser.email,
+                    googleId: createdUser.googleId,
+                    role: createdUser.role,
+                    mfaEnabled: createdUser.mfaEnabled,
+                }
                 res.status(201).json(user);
             } catch (err) {
-                res.status(500).json({ error: 'Error registering user', err });
-            }
+                if (err.code === 11000 || err.parent?.code === '23505') {
+                    return res.status(400).json({ 
+                        error: 'Email already in use', 
+                        details: err.message 
+                    });
+                }
+                res.status(500).json({ error: 'Error registering user', details: err.message });
+            }        
         },
         login: async (req, res) => {
             const { email, password } = req.body;
@@ -150,8 +163,12 @@ module.exports = (repositories) => {
             }
         },
         deleteUser: async (req, res) => {
+            // Add:
+            //  - User finding. Should only try to delete an user if it finds it. 
+            //  - Role verification. Only admins should be able to delete users.
             const body = req.body;
             try {
+                
                 if (body.id) { await userRepository.deleteOneUser({ id: body.id }) }
                 else if (body.email) { await userRepository.deleteOneUser({ email: body.email })}
                 
