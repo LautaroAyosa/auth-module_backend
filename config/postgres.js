@@ -6,13 +6,11 @@ let dbModels;
 
 const createSequelizeInstance = (pgUri) => {
   if (pgUri) {
-    console.log('hello', pgUri)
     return new Sequelize(pgUri, { dialect: 'postgres', logging: false });
   }
   if (process.env.NODE_ENV === 'production' && config.use_env_variable) {
     return new Sequelize(process.env[config.use_env_variable], { dialect: config.dialect, logging: false });
   }
-  console.log('chau', pgUri)
   return new Sequelize(config.database, config.username, config.password, {
     host: config.host,
     dialect: config.dialect,

@@ -5,9 +5,6 @@ const authRouter = require('express').Router();
 // module.exports = authRouter;
 
 module.exports = (repositories) => {
-
-    const authController = require('../controllers/authController')(repositories);
-
     const { 
         register,
         login,
