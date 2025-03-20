@@ -2,13 +2,13 @@
 const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 const authRouter = require('express').Router();
 
-// module.exports = authRouter;
-
 module.exports = (repositories) => {
     const { 
         register,
         login,
         logout,
+        updateUser,
+        updateEmail,
         deleteUser,
         makeAdmin,
         enableMFA,
@@ -36,7 +36,11 @@ module.exports = (repositories) => {
     authRouter.post('/refresh-token', refreshToken);
     authRouter.post('/request-reset-password', requestPasswordReset);
     authRouter.post('/reset-password', resetPassword);
-
+    
+    // PUT Routes
+    authRouter.put('/update-user', updateUser);
+    authRouter.put('/update-email/:token', updateEmail);
+    
     // GET Routes
     authRouter.get('/google', googleAuth);
     authRouter.get('/validate-session', validateSession);
