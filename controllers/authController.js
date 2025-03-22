@@ -456,9 +456,9 @@ module.exports = (repositories) => {
                     userId: user.id,
                 });
             
-                // Send email with reset link, e.g. https://yourapp.com/auth/reset-password/:token
+                // Send email with reset link, e.g. https://yourapp.com/authentication/reset-password/:token
                 // Include token as a URL param or query string
-                await sendEmail(user.email, 'Password Reset', `Reset link: ${process.env.HOME_URL}/auth/reset-password/${token}`);
+                await sendEmail(user.email, 'Password Reset', `Reset link: ${process.env.HOME_URL}/authentication/reset-password/${token}`);
                 res.json({ message: 'Reset link sent' });
             } catch (err) {
                 res.status(500).json({ error: 'Request failed' });

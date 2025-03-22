@@ -9,7 +9,7 @@ function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use(cors({
-    origin: "http://localhost:3000",
+    origin: process.env.FRONTEND_CORS_URL,
     credentials: true,
   }));
   return app;
