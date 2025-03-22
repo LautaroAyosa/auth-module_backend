@@ -1,7 +1,7 @@
 // /utils/sendEmail.js
 const nodemailer = require('nodemailer');
 
-async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, htmlContent) {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
@@ -17,7 +17,7 @@ async function sendEmail(to, subject, text) {
       from: `"${process.env.APP_NAME}" <${process.env.MAIL_USER}>`,
       to,
       subject,
-      text
+      html: htmlContent,
     });
   } catch (err) {
     console.error(err);

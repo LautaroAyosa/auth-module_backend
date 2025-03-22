@@ -71,8 +71,13 @@ class MongoUserRepository {
   }
 
   async updateUser(id, data) {
-    return this.UserModel.findOneAndUpdate({_id: id.id}, data, {new: true});
+    return this.UserModel.findOneAndUpdate(
+        { _id: id }, 
+        { $set: data },
+        { new: true, runValidators: true }
+    );
   }
+
 
   // Delete User by id or email string
   async deleteOneUser(data) {

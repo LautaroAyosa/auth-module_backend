@@ -12,6 +12,7 @@ module.exports = (repositories) => {
     const refreshTokenRepository = repositories.refreshTokenRepository;
     const temporarySessionRepository = repositories.temporarySessionRepository;
     const passwordResetTokenRepository = repositories.passwordResetTokenRepository;
+    const emailVerificationTokenRepository = repositories.emailVerificationTokenRepository;
 
     const generateAccessToken = (user) => {
         return jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -38,7 +39,7 @@ module.exports = (repositories) => {
                 // Check if accessToken is valid
                 const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
                 const user = await userRepository.findUserById({id: decoded.id});
-                res.json({ authenticated: true, user: { id: user.id, name: user.name, email: user.email, mfaEnabled: user.mfaEnabled, role: user.role } });
+                res.status(200).json({ authenticated: true, user: { id: user.id, name: user.name, email: user.email, mfaEnabled: user.mfaEnabled, role: user.role } });
             } catch (err) {
                 // If accessToken is expired, try refreshing it
                 if (err.name === 'TokenExpiredError') {
@@ -177,6 +178,108 @@ module.exports = (repositories) => {
                 res.status(500).json({ error: 'There has been an error deleting the user: ', err })
             }
         },
+        updateUser: async (req, res) => {
+            try {
+                const {name, email, password, confirmPassword} = req.body
+                const { refreshToken } = req.cookies;
+                if (!refreshToken) {
+                    return res.status(401).json({ error: "Unauthorized: No refresh token provided"});
+                }
+
+                // Get user Id from refreshToken
+                const {userId} = await refreshTokenRepository.findRefreshToken({token: refreshToken})
+                if (!userId) {
+                    return res.status(403).json({ error: "Forbidden: invalid refresh token"});
+                }
+
+                // Get refreshToken's account email
+                const user = await userRepository.findUserById({id: userId})
+                if (!user) {
+                    return res.status(404).json({ error: "User not found"})
+                }
+
+                // Verify the account being updated is the same that requested the change.
+                if (user.email !== email && email) {
+                    // User is trying to change email → Send confirmation email
+                    const token = crypto.randomBytes(32).toString("hex")
+                    
+                    // Get html email, replace links and send it.
+                    // const emailContent = emailVerificationTemplate.replace("{{verification_link}}", `${process.env.HOME_URL}/dashboard/setting/verify-email/${token}`);
+                    await sendEmail(user.email, "Verify Your Email Change", `Follow this link to accept the email change ${process.env.HOME_URL}/verify-email/${token}`);
+
+                    // If emails is sent successfully, store the token in the db.
+                    const expiresAt = new Date(Date.now() + 6 * 60 * 60 * 1000); // 6 hours
+                    await emailVerificationTokenRepository.createToken({userId: userId, newEmail: email, token: token, expiresAt: expiresAt})
+                    return res.status(200).json({ message: "Verification email sent. Please check your inbox to confirm email change."});
+                }
+
+                // If the user is updating the password, validate inputs
+                let hashedPassword = passport // Keep existing password if not changing
+                if (password) {
+                    if (!confirmPassword) {
+                        return res.status(400).json({error: "Confirm password is required when changing the password"})
+                    }
+                    if (password !== confirmPassword) {
+                        return res.status(400).json({error: "Passwords do not match"})
+                    }
+                    hashedPassword = await bcrypt.hash(password, 10);
+                }
+
+                const updatedUser = await userRepository.updateUser({_id: userId}, {
+                    ...(name && {name}), // Update name if provided
+                    ...(password && {password: hashedPassword}) // Update password if provided
+                });
+                return res.status(200).json({
+                    message: "Account updated successfully", 
+                    user: {
+                        name: updatedUser.name,
+                        role: updatedUser.role,
+                        mfaEnabled: updatedUser.mfaEnabled,
+                    }})
+
+            } catch (err) {
+                console.error("Error updating user:", err)
+                res.status(500).json({ error: 'Error updating your account' });
+            }
+        },
+        updateEmail: async (req, res) => {
+            try {
+                const {token} = req.params;
+
+                if (!token) {
+                    res.status(400).json({error: "Invalid request: No token provided"});
+                }
+                // Find the email verification record
+                const emailVerification = await emailVerificationTokenRepository.findToken({token});
+                if (!emailVerification) {
+                    return res.status(400).json({error: "Invalid or expired token"})
+                }
+
+                const {userId, newEmail} = emailVerification
+
+                // Check if email is already in use
+                const existingUser = await userRepository.findUserByEmail({email: newEmail});
+
+                if (existingUser) {
+                    return res.status(400).json({error: "Email is already in use"})
+                }
+
+                // Update user's email
+                const newUser = await userRepository.updateUser({_id: userId}, {email: newEmail});
+                
+                if ( newUser.email === newEmail ) {
+                    await emailVerificationTokenRepository.deleteToken({token});
+                    return res.status(200).json({message: "Email updated successfully", email: newUser.email})
+                    
+                } else {
+                    return res.status(400).json({error: "We coulnd't update your email" })
+                }
+
+            } catch (err) {
+                console.error("Error updating account email", err)
+                res.status(500).json({ error: "Error updating your account's email"})
+            }
+        },
         refreshToken: async (req, res) => {
             const { refreshToken } = req.cookies;
             if (!refreshToken) return res.status(401).json({ error: 'No refresh token provided' });
@@ -195,7 +298,7 @@ module.exports = (repositories) => {
                     sameSite: 'strict',
                     maxAge: 15 * 60 * 1000, // 15 minutes
                 });
-                res.statis(200).json({ message: 'Access token refreshed' });
+                res.status(200).json({ message: 'Access token refreshed' });
             } catch (err) {
                 res.status(500).json({ error: 'Error refreshing token' });
             }
@@ -235,8 +338,7 @@ module.exports = (repositories) => {
                 const recoveryCode = crypto.randomBytes(16).toString('hex'); // Generate recovery code
                 const hashedRecoveryCode = await bcrypt.hash(recoveryCode, 10);
         
-        
-                await userRepository.updateUser({ id: decoded.id }, {
+                await userRepository.updateUser({ _id: decoded.id }, {
                     mfaSecret: secret.base32,
                     mfaEnabled: true,
                     recoveryCode: hashedRecoveryCode,
@@ -291,7 +393,7 @@ module.exports = (repositories) => {
                     sameSite: 'strict',
                     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
                 });
-                res.json({ message: 'Login successful' });
+                res.status(200).json({ authenticated: true, user: {name: user.name, email: user.email, role: user.role, mfaEnabled: user.mfaEnabled}});
             } catch (err) {
                 res.status(500).json({ error: 'Error verifying MFA' });
             }
@@ -311,15 +413,15 @@ module.exports = (repositories) => {
                 if (!isValid) {
                     return res.status(401).json({ error: 'Invalid recovery code' });
                 }
-        
+
                 // Disable MFA
-                await userRepository.updateUser({ id: user.id }, { 
+                await userRepository.updateUser({ _id: user.id }, { 
                     mfaEnabled: false, 
                     mfaSecret: null, 
                     recoveryCode: null 
                 });
                 
-                res.json({ message: 'MFA has been removed from your account' });
+                res.status(200).json({ message: 'MFA has been removed from your account' });
             } catch (err) {
                 res.status(500).json({ error: 'Error recovering account' });
             }
@@ -327,7 +429,7 @@ module.exports = (repositories) => {
         resetMFA: async (req, res) => {
             const { userId } = req.body;
             try {
-                const user = await userRepository.updateUser({ id: userId }, {
+                const user = await userRepository.updateUser({ _id: userId }, {
                     mfaEnabled: false,
                     mfaSecret: null,
                     recoveryCode: null,
@@ -354,12 +456,12 @@ module.exports = (repositories) => {
                     userId: user.id,
                 });
             
-                // Send email with reset link, e.g. https://yourapp.com/reset-password/:token
+                // Send email with reset link, e.g. https://yourapp.com/authentication/reset-password/:token
                 // Include token as a URL param or query string
-                await sendEmail(user.email, 'Password Reset', `Reset link: ${process.env.HOME_URL}/auth/reset-password/${token}`);
+                await sendEmail(user.email, 'Password Reset', `Reset link: ${process.env.HOME_URL}/authentication/reset-password/${token}`);
                 res.json({ message: 'Reset link sent' });
             } catch (err) {
-                res.status(500).json({ error: 'Request failed', err });
+                res.status(500).json({ error: 'Request failed' });
             }
         },
         resetPassword: async (req, res) => {
@@ -372,14 +474,14 @@ module.exports = (repositories) => {
             
                 // Update user password
                 const hashedPassword = await bcrypt.hash(newPassword, 10);
-                await userRepository.updateUser({id: resetToken.userId}, {
+                await userRepository.updateUser({_id: resetToken.userId}, {
                     password: hashedPassword
                 });
             
                 // Remove token from DB
                 await passwordResetTokenRepository.deletePasswordResetToken({ token: token });
             
-                res.json({ message: 'Password reset successful' });
+                res.status(200).json({ message: 'Password reset successful' });
             } catch (err) {
                 res.status(500).json({ error: 'Reset failed' });
             }

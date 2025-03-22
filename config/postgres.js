@@ -19,30 +19,25 @@ const createSequelizeInstance = (pgUri) => {
 };
 
 const loadModels = (sequelize) => {
-    // Import models
+  // Import models
   const User = require('../models/sequelize/User')(sequelize, DataTypes);
   const PasswordResetToken = require('../models/sequelize/PasswordResetToken')(sequelize, DataTypes);
   const RefreshToken = require('../models/sequelize/RefreshToken')(sequelize, DataTypes);
   const TemporarySession = require('../models/sequelize/TemporarySession')(sequelize, DataTypes);
-
+  const EmailVerificationToken = require('../models/sequelize/EmailVerificationToken.js')(sequelize, DataTypes);
+  
   // Set up associations
   RefreshToken.belongsTo(User, { foreignKey: 'userId' });
   PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
   TemporarySession.belongsTo(User, { foreignKey: 'userId' });
-  // const models = {};
-  // ['User', 'PasswordResetToken', 'RefreshToken', 'TemporarySession'].forEach(modelName => {
-  //   models[modelName] = require(`../models/sequelize/${modelName}`)(sequelize, DataTypes);
-  // });
-  // console.log(models);
-  // Object.values(models).forEach(model => {
-  //   if (model.associate) model.associate(models);
-  // });
+  EmailVerificationToken.belongsTo(User, { foreignKey: 'userId'});
 
   models = {
     User,
     PasswordResetToken,
     RefreshToken,
-    TemporarySession
+    TemporarySession,
+    EmailVerificationToken,
   };
   return models;
 };
