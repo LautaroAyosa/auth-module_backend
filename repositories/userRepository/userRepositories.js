@@ -8,17 +8,21 @@ class PostgresUserRepository {
     this.UserModel = UserModel;
   }
 
-  async findAllUsers() {
-    return this.UserModel.findAll();
+  async findAllUsers(fields = []) {
+    const attributes = ['id', ...fields];
+    return this.UserModel.findAll({ attributes });
   }
 
-  async findUserById(data) {
-    return this.UserModel.findByPk(data.id);
+  async findUserById(data, fields = []) {
+    const attributes = ['id', ...fields];
+    return this.UserModel.findByPk(data.id, { attributes });
   }
 
-  async findUserByEmail(data) {
-    return await this.UserModel.findOne({ 
+  async findUserByEmail(data, fields = []) {
+    const attributes = ['id', ...fields];
+    return this.UserModel.findOne({ 
       where: { email: data.email },
+      attributes,
       raw: true
     });
   }
@@ -54,16 +58,22 @@ class MongoUserRepository {
     this.UserModel = UserModel;
   }
 
-  async findAllUsers() {
-    return this.UserModel.find();
+  async findAllUsers(fields = []) {
+    const projection = this._buildProjection(fields);
+    const users = await this.UserModel.find({}, projection).lean();
+    return users.map(this._formatMongoDoc);
   }
 
-  async findUserById(data) {
-    return this.UserModel.findById(data.id);
+  async findUserById(data, fields = []) {
+    const projection = this._buildProjection(fields);
+    const user = await this.UserModel.findById(data.id, projection).lean();
+    return this._formatMongoDoc(user);
   }
 
-  async findUserByEmail(data) {
-    return this.UserModel.findOne({email: data.email});
+  async findUserByEmail(data, fields = []) {
+    const projection = this._buildProjection(fields);
+    const user = await this.UserModel.findOne({ email: data.email }, projection).lean();
+    return this._formatMongoDoc(user);
   }
 
   async createUser(data) {
@@ -71,23 +81,34 @@ class MongoUserRepository {
   }
 
   async updateUser(id, data) {
-    return this.UserModel.findOneAndUpdate(
+    const updated = await this.UserModel.findOneAndUpdate(
         { _id: id }, 
         { $set: data },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true, lean: true }
     );
+    return this._formatMongoDoc(updated);
   }
-
 
   // Delete User by id or email string
   async deleteOneUser(data) {
     if (data.id) {
-      return this.UserModel.deleteOne({id: data.id});
+      return this.UserModel.deleteOne({ id: data.id });
     } else if (data.email) {
-      return this.UserModel.deleteOne({email: data.email});
+      return this.UserModel.deleteOne({ email: data.email });
     }
-}
+  }
+
+  _buildProjection(fields) {
+    const projection = { _id: 1 };
+    fields.forEach(field => projection[field] = 1);
+    return projection;
+  }
+
+  _formatMongoDoc(doc) {
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { id: _id.toString(), ...rest };
+  }
 }
   
-  module.exports = { PostgresUserRepository, MongoUserRepository };
-  
+module.exports = { PostgresUserRepository, MongoUserRepository };
