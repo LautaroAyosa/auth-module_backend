@@ -10,6 +10,7 @@ module.exports = (repositories) => {
         logout,
         updateUser,
         updateEmail,
+        updateRole,
         deleteUser,
         makeAdmin,
         enableMFA,
@@ -23,6 +24,7 @@ module.exports = (repositories) => {
         validateSession,
         protectedRoute,
         getAllUsers,
+        getUserById
     } = require('../controllers/authController')(repositories);
 
 
@@ -43,12 +45,14 @@ module.exports = (repositories) => {
     // PUT Routes
     authRouter.put('/update-user', requireAuth, validate(schemas.updateUser), updateUser);
     authRouter.put('/update-email/:token', updateEmail);
+    authRouter.put('/update-role', requireAuth, requireRole('admin'), updateRole);
 
     // DELETE Routes
     authRouter.delete('/delete-user', requireAuth, requireRole('admin'), deleteUser);
     
     // GET Routes
     authRouter.get('/get-all-users', requireAuth, requireRole('admin'), getAllUsers);
+    authRouter.get('/get-user-by-id/:id', requireAuth, requireRole('admin'), getUserById)
     authRouter.get('/google', googleAuth);
     authRouter.get('/validate-session', requireAuth, validateSession);
     authRouter.get('/admin', requireAuth, requireRole('admin', protectedRoute));
