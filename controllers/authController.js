@@ -145,6 +145,19 @@ module.exports = (repositories) => {
                 return handleError(res, 500, "Error updating your account's email");
             }
         },
+        updateRole: async (req, res) => {
+            const { userId, newRole } = req.body;
+            const user = req.user;
+            try {
+                if (!user || user.role !== 'admin') {
+                    return handleError(res, 403, 'Forbidden');
+                }
+                const updatedUser = await userRepository.updateUser({ _id: userId }, { role: newRole });
+                res.status(200).json({ message: 'Role updated successfully', user: { name: updatedUser.name, email: updatedUser.email, role: updatedUser.role } });
+            } catch (err) {
+                return handleError(res, 500, 'Error updating user role');
+            }
+        },
         refreshToken: async (req, res) => {
             const { refreshToken } = req.cookies;
             if (!refreshToken) {
@@ -296,6 +309,16 @@ module.exports = (repositories) => {
                 res.status(200).json(users);
             } catch (err) {
                 return handleError(res, 500, 'Error getting users');
+            }
+        },
+        getUserById: async (req, res) => {
+            const { id } = req.params;
+            try {
+                const user = await userRepository.findUserById({ id: id }, ['name', 'email', 'role', 'mfaEnabled']);
+                if (!user) return handleError(res, 404, 'No user found');
+                res.status(200).json(user);
+            } catch (err) {
+                return handleError(res, 500, 'Error getting user');
             }
         }
     };

@@ -30,15 +30,28 @@ const schemas = {
     updateUser: Joi.object({
         name: Joi.string().min(3).max(30),
         email: Joi.string().pattern(validationConfig.email.regex).messages({
-            'string.pattern.base': validationConfig.email.message
+          'string.pattern.base': validationConfig.email.message
         }),
-        password: Joi.string().min(validationConfig.password.minLength).max(validationConfig.password.maxLength).pattern(validationConfig.password.regex).messages({
+        password: Joi.string()
+          .min(validationConfig.password.minLength)
+          .max(validationConfig.password.maxLength)
+          .pattern(validationConfig.password.regex)
+          .empty('') // treat empty string as undefined
+          .messages({
             'string.pattern.base': validationConfig.password.message
-        }),
-        confirmPassword: Joi.string().valid(Joi.ref('password')).messages({
-            'any.only': 'Passwords do not match'
+          }),
+        confirmPassword: Joi.any().empty('').when('password', {
+        is: Joi.exist(),
+        then: Joi.string()
+            .required()
+            .valid(Joi.ref('password'))
+            .messages({
+            'any.only': 'Passwords do not match',
+            'any.required': 'Confirm password is required when changing password'
+            }),
+        otherwise: Joi.forbidden()
         })
-    }),
+      }).or('name', 'email', 'password'),         
     requestPasswordReset: Joi.object({
         email: Joi.string().pattern(validationConfig.email.regex).required().messages({
             'string.pattern.base': validationConfig.email.message
